@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BLE Config Wifi</title>
+    <!-- Le Sy Sang -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .custom-border {
+            border: 4px solid #2d5b88; /* Màu viền đậy, có thể thay đổi màu sắc bằng mã màu khác */
+        }
+        .navbar {
+            background-color: #343a40;
+        }
+        .navbar-brand {
+            font-size: 24px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .alert-info {
+            background-color: #17a2b8;
+            color: #fff;
+        }
+        h4 {
+            color: #7f89f2;
+        }
+        .text-log {
+            width: 100%;
+        }
+        footer {
+            background-color: #343a40;
+            color: #fff;
+        }
+    </style>
+    <!-- Sử dụng Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark shadow">
+        <div class="container">
+          <a class="navbar-brand" href="#" id="navbarTitle">STATUS</a>
+          <div class="d-flex">
+            <button class="btn btn-primary" id="toggleButton" onclick="toggleFunction()">SCAN</button>
+          </div>
+        </div>
+    </nav>
+    <div class="custom-border container">
+        <h4 class="text-center mt-2"><strong>CONFIG WIFI</strong></h4>
+        <h6 class="text-center mt-2">Service UUID: 0000181f-0000-1000-8000-00805f9b34fb</h6>
+        <hr>
+        <h6 class="text-center mt-2">Characteristic UUID: 00002a18-0000-1000-8000-00805f9b34fb</h6>
+        <div class="container">
+            <div class="d-flex justify-content-center">
+            <input type="text" id="input1" placeholder="Enter SSID">
+        </div>
+        <div class="d-flex justify-content-center mt-1">
+            <input type="text" id="input2" placeholder="Enter Password">
+        </div>
+        <div class="d-flex justify-content-center mt-1 mb-1">
+            <button onclick="ConnectWifi()">Kết nối</button>
+        </div>
+    </div>
+    <div class="container">
+            <div class="card card-body">
+                <h5 class="card-title">TERMINAL</h5>
+                <div class="row">
+                    <div class="col-sm-12 mb-3">
+                        <textarea class="form-control text-log" id="textareaNotification" style="height: 200px"></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                <div class="form-check form-check-inline ml-3">
+                    <input type="checkbox" class="form-check-input" id="Checkauto" onchange="Checkautoscroll()">
+                    <label class="form-check-label" for="myCheckbox">Autoscroll</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="Checkbox" onchange="Checkshowtime()">
+                    <label class="form-check-label" for="Checkbox">Time</label>
+                </div>
+                </div>
+            </div>
+    </div>
+</div>
+    </body>
+    <footer class="bg-dark text-white text-center py-2">
+        &copy; PTIT TEAM
+    </footer>
+
+    <!-- Sử dụng Bootstrap JavaScript (nếu cần) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        var deviceName = 'ConfigWifi';
+        var bleService = "0000181f-0000-1000-8000-00805f9b34fb";
+        var bleCharacteristic = "00002a18-0000-1000-8000-00805f9b34fb";
+        var gattCharacteristic;
+        var bluetoothDeviceDetected;
+        function isWebBluetoothEnabled() {
+            if (!navigator.bluetooth) {
+            console.log('Web Bluetooth API is not available in this browser!');
+            // log('Web Bluetooth API is not available in this browser!');
+            return false
+            }
+
+            return true
+        }
+        function requestBluetoothDevice() {
+            if(isWebBluetoothEnabled){
+        log1('FINDING...');
+        navigator.bluetooth.requestDevice({
+            filters: [{
+                name: deviceName
+            }],
+            optionalServices: ["0000181f-0000-1000-8000-00805f9b34fb"] 
+            })         
+        .then(device => {
+            dev=device;
+            log1(dev.name);
+            console.log('Đang kết nối với', dev);
+            return device.gatt.connect();
+        })
+        .then(server => {
+                console.log('Getting GATT Service...');
+                log1('GET Ser...');
+                return server.getPrimaryService(bleService);
+            })
+            .then(service => {
+                console.log('Getting GATT Characteristic...');
+                log1('GET Cha... ');
+                return service.getCharacteristic(bleCharacteristic);
+            })
+            .then(characteristic => {
+            log1("CONNECTED");
+            gattCharacteristic = characteristic
+            gattCharacteristic.addEventListener('characteristicvaluechanged', handleChangedValue)
+            return gattCharacteristic.startNotifications()
+            // document.querySelector('#start').disabled = false;
+            // document.querySelector('#stop').disabled = true;
+        })
+        .catch(error => {
+				console.log("Không thể kết nối với thiết bị" + error);
+                // log("Không thể kết nối với thiết bị" + error);
+                log1("ERROR");
+			});
+        }}
+        function disconnect()
+		{
+            log1("STATUS");
+            console.log("Đã ngắt kết nối với: " + dev.name);
+            return dev.gatt.disconnect();
+		}
+        //Hiện thông báo
+        window.onload = function() {
+            alert('Hãy nhấn nút SCAN để bắt đầu tìm kiếm thiết bị Bluetooth');
+        };
+        function scrollToBottom() {
+        var textarea = document.getElementById("textareaNotification");
+        textarea.scrollTop = textarea.scrollHeight;
+        }
+        let checkautoscroll;
+        function Checkautoscroll() {
+            const checkbox = document.getElementById("Checkauto");
+            if (checkbox.checked) {
+                checkautoscroll=true;
+            } else {
+                checkautoscroll=false;
+            }
+        }
+        let check;
+        function Checkshowtime() {
+            const checkbox = document.getElementById("Checkbox");
+            if (checkbox.checked) {
+               check=true;
+            } else {
+               check=false;
+            }
+        }
+        
+        function handleChangedValue(event) {
+        let data = event.target.value;
+        let i=0;
+        // Khởi tạo một mảng để chứa dữ liệu từ mảng uint8_t
+        let dataArray = new Uint8Array(data.buffer);
+        // Khởi tạo chuỗi để chứa dữ liệu từ mảng uint8_t
+        let valueString = '';
+
+        // Lặp qua mảng để trích xuất dữ liệu từng phần tử
+        for (i; i < dataArray.length; i++) {
+            valueString += String.fromCharCode(dataArray[i]);
+        }
+        var now = new Date();
+        console.log(' -> ' + now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds() + valueString);
+        $('#battery_level').text(valueString);
+        log(valueString );
+        if(checkautoscroll) scrollToBottom();
+        }
+    //Hiển thị văn bản
+    function log(text) {
+            const now = new Date();
+            const prefixlog = now.getHours() + ':' + now.getMinutes() + ':'  + now.getSeconds() + ' -> ';
+
+           if(check) $('.text-log').val($('.text-log').val() + prefixlog + text );
+           else  $('.text-log').val($('.text-log').val() + text);
+        }
+    let isScanning = true;
+    function toggleFunction() {
+        const button = document.getElementById("toggleButton");
+
+        if (isScanning) {
+            button.innerText = "DISCONNECT";
+            requestBluetoothDevice();
+            isScanning = false;
+        } else {
+            button.innerText = "SCAN";
+            disconnect();
+            isScanning = true;
+        }
+    }
+    function log1(text){
+        const navbarTitle = document.getElementById('navbarTitle');
+        navbarTitle.textContent = text;
+    }
+    function ConnectWifi() {
+        // Lấy giá trị từ các ô nhập văn bản
+    var input1Value = document.getElementById("input1").value;
+    var input2Value = document.getElementById("input2").value;
+
+    // Kết hợp dữ liệu từ hai ô nhập thành một chuỗi
+    var combinedString = input1Value +";"+ input2Value;
+
+    // Chuyển chuỗi thành mảng byte (Uint8Array)
+    var data = new TextEncoder().encode(combinedString);
+
+    // Gửi dữ liệu dưới dạng mảng byte đến BLE
+    
+    gattCharacteristic.writeValue(data)
+    .then(() => {
+        log("You-> Data sent successfully \n");
+        console.log("Data sent successfully.");
+    })
+    .catch(error => {
+        log("You-> Error sending data: " + error +"\n");
+        console.log("Error sending data: " + error);
+    });
+    }
+    </script>
+</body>
+</html>
